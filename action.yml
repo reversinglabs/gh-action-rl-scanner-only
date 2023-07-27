@@ -1,0 +1,48 @@
+# action.yml
+name: 'gh-action-rl-scanner-only'
+author: 'ReversingLabs'
+description: 'Scan an artifact with ReversingLabs secure.software CLI'
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  artifact-to-scan:
+    description: 'Path to the package file (artifact) you want to scan'
+    required: true
+  report-path:
+    description: 'Path to a directory where the reports will be saved (must be a new directory, with a path relative to the github.workspace)'
+    required: false
+    default: MyReportDir
+
+outputs:
+  description:
+    description: 'The result of the action: a string terminating in FAIL or PASS'
+  status:
+    description: 'The single word result of the action: success, failure or error'
+
+runs:
+  using: "composite"
+  steps:
+    - id: rl-scanner
+      shell: bash
+      run: |
+        rm -rf "${{ inputs.report-path }}"
+        mkdir -p "${{ inputs.report-path }}"
+
+        R_PATH=$( realpath "${{ inputs.report-path }}" )
+        A_PATH=$( realpath "${{ inputs.artifact-to-scan }}" )
+        A_DIR=$( dirname "${A_PATH}" )
+        A_FILE=$( basename "${A_PATH}" )
+
+        # docker pull reversinglabs/rl-scanner:latest
+        docker run --rm -u $(id -u):$(id -g) \
+          -e "RLSECURE_ENCODED_LICENSE=${{ env.RLSECURE_ENCODED_LICENSE }}" \
+          -e "RLSECURE_SITE_KEY=${{ env.RLSECURE_SITE_KEY }}" \
+          -v "${A_DIR}/:/packages:ro" \
+          -v "${R_PATH}/:/report" \
+          reversinglabs/rl-scanner:latest \
+            rl-scan --package-path="/packages/${A_FILE}" \
+              --report-path=/report \
+              --report-format=all
