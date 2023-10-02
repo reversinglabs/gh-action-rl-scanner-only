@@ -11,38 +11,81 @@ inputs:
   artifact-to-scan:
     description: 'Path to the package file (artifact) you want to scan'
     required: true
+    type: string
   report-path:
     description: 'Path to a directory where the reports will be saved (must be a new directory, with a path relative to the github.workspace)'
     required: false
     default: MyReportDir
+    type: string
+
+  rl-store:
+    description: 'Path to a directory where a package store has been initialized'
+    required: false
+    default: ""
+    type: string
+  rl-diff-with:
+    description: 'Perform a diff scan against the provided version'
+    required: false
+    default: ""
+    type: string
+  rl-package-url:
+    description: 'A package URL to use for this scan'
+    required: false
+    default: ""
+    type: string
+
+  rl-verbose:
+    description: 'Make the scanner more verbose'
+    required: false
+    default: false
+    type: bool
+
+  rl-proxy-server:
+    description: 'An optional proxy server to use'
+    required: false
+    default: ""
+    type: string
+  rl-proxy-port:
+    description: 'An optional proxy server port to use'
+    required: false
+    default: ""
+    type: string
+  rl-proxy-user:
+    description: 'An optional proxy server user to use'
+    required: false
+    default: ""
+    type: string
+  rl-proxy-password:
+    description: 'An optional proxy server password to use'
+    required: false
+    default: ""
+    type: string
 
 outputs:
   description:
     description: 'The result of the action: a string terminating in FAIL or PASS'
+    value: ${{ steps.rl-scanner.outputs.description }}
   status:
     description: 'The single word result of the action: success, failure or error'
+    value: ${{ steps.rl-scanner.outputs.status }}
 
 runs:
   using: "composite"
   steps:
-    - id: rl-scanner
+    - run: echo "${{ github.action_path }}" >> $GITHUB_PATH
       shell: bash
-      run: |
-        rm -rf "${{ inputs.report-path }}"
-        mkdir -p "${{ inputs.report-path }}"
 
-        R_PATH=$( realpath "${{ inputs.report-path }}" )
-        A_PATH=$( realpath "${{ inputs.artifact-to-scan }}" )
-        A_DIR=$( dirname "${A_PATH}" )
-        A_FILE=$( basename "${A_PATH}" )
-
-        # docker pull reversinglabs/rl-scanner:latest
-        docker run --rm -u $(id -u):$(id -g) \
-          -e "RLSECURE_ENCODED_LICENSE=${{ env.RLSECURE_ENCODED_LICENSE }}" \
-          -e "RLSECURE_SITE_KEY=${{ env.RLSECURE_SITE_KEY }}" \
-          -v "${A_DIR}/:/packages:ro" \
-          -v "${R_PATH}/:/report" \
-          reversinglabs/rl-scanner:latest \
-            rl-scan --package-path="/packages/${A_FILE}" \
-              --report-path=/report \
-              --report-format=all
+    - id: rl-scanner
+      run: ${{ github.action_path }}/run-scanner.sh
+      shell: bash
+      env:
+        REPORT_PATH: ${{ inputs.report-path }}
+        MY_ARTIFACT_TO_SCAN_PATH: ${{ inputs.artifact-to-scan }}
+        RL_STORE: ${{ inputs.rl-store}}
+        RL_PACKAGE_URL: ${{ inputs.rl-package-url }}
+        RL_DIFF_WITH: ${{ inputs.rl-diff-with }}
+        RL_VERBOSE: ${{ inputs.rl-verbose }}
+        RLSECURE_PROXY_SERVER: ${{ inputs.rl-proxy-server }}
+        RLSECURE_PROXY_PORT: ${{ inputs.rl-proxy-port }}
+        RLSECURE_PROXY_USER: ${{ inputs.rl-proxy-user }}
+        RLSECURE_PROXY_PASSWORD: ${{ inputs.rl-proxy-password }}
