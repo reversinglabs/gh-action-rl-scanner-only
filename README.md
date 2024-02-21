@@ -93,7 +93,7 @@ This comparison is also known as the **diff scan**.
 
 To perform a diff scan, `rl-secure` needs to preserve the results of previous scans in a package store.
 When using a package store, analysis results for every scanned artifact are accessible with the PURL in the format `<project>/<package>@<version>`.
-This lets you compare the scan results of an artifact against a previously scanned artifact in the same project and package. 
+This lets you compare the scan results of an artifact against a previously scanned artifact in the same project and package.
 
 To compare artifacts, use the `rl-diff-with` parameter when scanning an artifact to specify the PURL of a previous version to compare against.
 The diff scan action will verify that the requested version was actually scanned before, and ignore the request for a diff scan if there are no results for the requested `<project>/<package>@<version>`.
@@ -101,7 +101,7 @@ The diff scan action will verify that the requested version was actually scanned
 
 ### Optional proxy configuration
 
-In some cases, proxy configuration may be needed to deploy and use `rl-secure`. 
+In some cases, proxy configuration may be needed to deploy and use `rl-secure`.
 You can configure proxy settings with the `rl-proxy-*` parameters for any self-hosted runner, including local GitHub Enterprise setups.
 
 When using the `rl-proxy-server` parameter, you must also specify the port with `rl-proxy-port`.
@@ -165,7 +165,7 @@ jobs:
 
     steps:
       # Need to check out data before we can do anything
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Replace this with your build process
       # Need to produce one file as the build artifact in scanfile=<relative file path>
