@@ -1,7 +1,7 @@
 # action.yml
 name: 'gh-action-rl-scanner-only'
 author: 'ReversingLabs'
-description: 'Scan an artifact with ReversingLabs secure.software CLI'
+description: 'Scan an artifact with ReversingLabs Spectra Assure CLI'
 
 branding:
   icon: 'shield'
