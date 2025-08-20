@@ -137,6 +137,13 @@ The action creates the reports in directory: `${{ inputs.report-path }}`.
 
 Users can control the `report-path` as an input parameter.
 
+The `report-path` will now also hold the `RL-SAFE archive`.
+
+The [RL-SAFE archive](https://docs.secure.software/concepts/analysis-reports#rl-safe-archive)
+is a convenient way to get the full SAFE report and all other supported report formats for a software package in a single file.
+The archive can be freely shared and moved between different computers, and viewed without requiring a Spectra Assure product license.
+To open the archive and work with it, you need the [SAFE Viewer](https://docs.secure.software/safe-viewer) - a free, cross-platform tool developed by ReversingLabs.
+The RL-SAFE archive is named report.rl-safe and stored in `report-path`
 
 ## Examples
 

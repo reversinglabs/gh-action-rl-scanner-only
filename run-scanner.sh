@@ -173,7 +173,7 @@ scan_with_store()
                 --replace \
                 --package-path="/packages/${A_FILE}" \
                 --report-path=/report \
-                --report-format=all \
+                --report-format=all --pack-safe \
                 ${DIFF_WITH} 1>1 2>2
     RR=$?
     STATUS=$( grep 'Scan result:' 1 )
@@ -193,7 +193,7 @@ scan_no_store()
         reversinglabs/rl-scanner:latest \
             rl-scan --package-path="/packages/${A_FILE}" \
                 --report-path=/report \
-                --report-format=all 1>1 2>2
+                --report-format=all --pack-safe 1>1 2>2
     RR=$?
     STATUS=$( grep 'Scan result:' 1 )
 }
