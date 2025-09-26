@@ -1,5 +1,50 @@
 #! /bin/bash
 
+# PARAMS: passed via the environment
+#
+# REPORT_PATH: a optional directory path
+# MY_ARTIFACT_TO_SCAN_PATH: a file path
+# RL_STORE: a directory path (default "")
+# RL_PACKAGE_URL: a optional purl string (default: "") # may contain @ or /
+# RL_DIFF_WITH: a optional purl string (default "") # may contain @ or /
+# RL_VERBOSE: a optional bool (default false)
+# RLSECURE_PROXY_SERVER: a optional string (default "") # server dns or ip
+# RLSECURE_PROXY_PORT: a optional string (default "") # numeric
+# RLSECURE_PROXY_USER: a optional string (default "")
+# RLSECURE_PROXY_PASSWORD: a optional string (default "") could contain special chars
+
+cleanup()
+{
+    # suspicious chars are mainly `$><|&;
+    # if $ is allowed then $( should not be allowed (exept for passwords)
+
+    # for bool we can remove `$><|;&
+    RL_VERBOSE=${RL_VERBOSE//[\`\$><|;&]/}
+
+    # file or dir paths may not have `$><|;& so remove
+    REPORT_PATH=${REPORT_PATH//[\`\$><|;&]/}
+    MY_ARTIFACT_TO_SCAN_PATH=${MY_ARTIFACT_TO_SCAN_PATH//[\`\$><|;&]/}
+    RL_STORE=${RL_STORE//[\`\$><|;&]/}
+
+    # purl (name and version) may not have ` so remove
+    RL_PACKAGE_URL=${RL_PACKAGE_URL//[\`]/}
+    RL_DIFF_WITH=${RL_DIFF_WITH//[\`]/}
+
+    # the proxy params are passed explicitly via the environment
+
+    # a server is either ip4 or ip6 or dns; safe to remove $`><|;&
+    RLSECURE_PROXY_SERVER=${RLSECURE_PROXY_SERVER//[\`\$><|;&]/}
+
+    # a port is always numeric, remove all other chars
+    RLSECURE_PROXY_PORT=${RLSECURE_PROXY_PORT//[^0-9]/}
+
+    # a user may not contain: `$><|&;
+    RLSECURE_PROXY_USER=${RLSECURE_PROXY_USER//[\`\$><|;&]/}
+
+    # a pass is more difficult as it can contain almost anything
+    # in this case we can export it and forward it to docker via the environment
+}
+
 do_verbose()
 {
     cat <<!
@@ -131,24 +176,29 @@ prep_proxy_data()
 {
     PROXY_DATA=""
 
+    # for docker we dont have to specify the value of a env var if it is already exported
     if [ ! -z "${RLSECURE_PROXY_SERVER}" ]
     then
-        PROXY_DATA="${PROXY_DATA} -e RLSECURE_PROXY_SERVER=${RLSECURE_PROXY_SERVER}"
+        export RLSECURE_PROXY_SERVER
+        PROXY_DATA="${PROXY_DATA} -e RLSECURE_PROXY_SERVER"
     fi
 
     if [ ! -z "${RLSECURE_PROXY_PORT}" ]
     then
-        PROXY_DATA="${PROXY_DATA} -e RLSECURE_PROXY_PORT=${RLSECURE_PROXY_PORT}"
+        export RLSECURE_PROXY_PORT
+        PROXY_DATA="${PROXY_DATA} -e RLSECURE_PROXY_PORT"
     fi
 
     if [ ! -z "${RLSECURE_PROXY_USER}" ]
     then
-        PROXY_DATA="${PROXY_DATA} -e RLSECURE_PROXY_USER=${RLSECURE_PROXY_USER}"
+        export RLSECURE_PROXY_USER
+        PROXY_DATA="${PROXY_DATA} -e RLSECURE_PROXY_USER"
     fi
 
     if [ ! -z "${RLSECURE_PROXY_PASSWORD}" ]
     then
-        PROXY_DATA="${PROXY_DATA} -e RLSECURE_PROXY_PASSWORD=${RLSECURE_PROXY_PASSWORD}"
+        export RLSECURE_PROXY_PASSWORD
+        PROXY_DATA="${PROXY_DATA} -e RLSECURE_PROXY_PASSWORD"
     fi
 }
 
@@ -158,10 +208,13 @@ scan_with_store()
     set +e # we do our own error handling in this func
     set -x
 
+    export RLSECURE_ENCODED_LICENSE
+    export RLSECURE_SITE_KEY
+
     # rl-store will be initialized if it is empty
     docker run --rm -u $(id -u):$(id -g) \
-        -e "RLSECURE_ENCODED_LICENSE=${RLSECURE_ENCODED_LICENSE}" \
-        -e "RLSECURE_SITE_KEY=${RLSECURE_SITE_KEY}" \
+        -e "RLSECURE_ENCODED_LICENSE" \
+        -e "RLSECURE_SITE_KEY" \
         ${PROXY_DATA} \
         -v "${A_DIR}/:/packages:ro" \
         -v "${R_PATH}/:/report" \
@@ -169,7 +222,7 @@ scan_with_store()
         reversinglabs/rl-scanner:latest \
             rl-scan \
                 --rl-store=/rl-store \
-                --purl=${RL_PACKAGE_URL} \
+                --purl="${RL_PACKAGE_URL}" \
                 --replace \
                 --package-path="/packages/${A_FILE}" \
                 --report-path=/report \
@@ -185,13 +238,14 @@ scan_no_store()
     set +e # we do our own error handling in this func
 
     docker run --rm -u $(id -u):$(id -g) \
-        -e "RLSECURE_ENCODED_LICENSE=${RLSECURE_ENCODED_LICENSE}" \
-        -e "RLSECURE_SITE_KEY=${RLSECURE_SITE_KEY}" \
+        -e "RLSECURE_ENCODED_LICENSE" \
+        -e "RLSECURE_SITE_KEY" \
         ${PROXY_DATA} \
         -v "${A_DIR}/:/packages:ro" \
         -v "${R_PATH}/:/report" \
         reversinglabs/rl-scanner:latest \
-            rl-scan --package-path="/packages/${A_FILE}" \
+            rl-scan \
+                --package-path="/packages/${A_FILE}" \
                 --report-path=/report \
                 --report-format=all --pack-safe 1>1 2>2
     RR=$?
@@ -254,11 +308,12 @@ set_status_PassFail()
         echo "status=success" >> $GITHUB_OUTPUT
         echo "::notice::$STATUS"
     fi
-
 }
 
 main()
 {
+    cleanup # sanitize input passed from the environment
+
     if [ "${RL_VERBOSE}" != "false" ]
     then
         do_verbose
@@ -289,4 +344,4 @@ main()
     exit ${RR}
 }
 
-main $@
+main "$@"
